@@ -23,13 +23,15 @@
  */
 package org.kitteh.pastegg;
 
-@SuppressWarnings("CanBeFinal")
-public class PasteFile {
-    private final String id;
-    private final String name;
-    private final PasteContent content;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-    public PasteFile(String id, String name, PasteContent content) {
+public class PasteFile {
+    private final @Nullable String id;
+    private final @NotNull String name;
+    private final @NotNull PasteContent content;
+
+    public PasteFile(@Nullable String id, @NotNull String name, @NotNull PasteContent content) {
         this.id = id;
         this.name = name;
         this.content = content;
@@ -39,15 +41,15 @@ public class PasteFile {
         this(null, name, content);
     }
 
-    public PasteContent getContent() {
+    public @NotNull PasteContent getContent() {
         return this.content;
     }
 
-    public String getId() {
+    public @Nullable String getId() {
         return this.id;
     }
 
-    public String getName() {
+    public @NotNull String getName() {
         return this.name;
     }
 }

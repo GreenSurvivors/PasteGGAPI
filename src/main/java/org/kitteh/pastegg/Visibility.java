@@ -24,6 +24,7 @@
 package org.kitteh.pastegg;
 
 import com.google.gson.annotations.SerializedName;
+import org.jetbrains.annotations.Contract;
 
 public enum Visibility {
     @SerializedName("private")
@@ -33,6 +34,7 @@ public enum Visibility {
     @SerializedName("unlisted")
     UNLISTED;
 
+    @Contract(pure = true)
     public static Visibility getDefault() {
         return UNLISTED;
     }

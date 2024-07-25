@@ -23,12 +23,11 @@
  */
 package org.kitteh.pastegg;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
@@ -42,12 +41,12 @@ public class ConnectionProvider {
         return responseCode;
     }
 
-    static String processPasteRequest(String key, String output) throws IOException {
+    static @NotNull String processPasteRequest(@NotNull String key, String output) throws IOException {
         return processPasteRequest(key, output,false);
     }
 
     static String processPasteRequest(String key, String output, boolean debug) throws IOException {
-        URL url = new URL("https://api.paste.gg/v1/pastes");
+        URL url = URI.create("https://api.paste.gg/v1/pastes").toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=" + StandardCharsets.UTF_8);
@@ -107,8 +106,8 @@ public class ConnectionProvider {
         String key = "Key "+deletionKey;
         conn.setRequestProperty("Authorization",key);
         conn.connect();
+
         int responseCode = conn.getResponseCode();
         return responseCode == 204;
     }
-
 }

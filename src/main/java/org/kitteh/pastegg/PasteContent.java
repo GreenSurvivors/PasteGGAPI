@@ -24,6 +24,8 @@
 package org.kitteh.pastegg;
 
 import com.google.gson.annotations.SerializedName;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
@@ -46,12 +48,10 @@ public class PasteContent {
 
             try {
                 ByteArrayOutputStream byteOutput = new ByteArrayOutputStream(bytes.length);
-                try {
+                try (byteOutput) {
                     try (GZIPOutputStream gzipOutput = new GZIPOutputStream(byteOutput)) {
                         gzipOutput.write(bytes);
                     }
-                } finally {
-                    byteOutput.close();
                 }
                 return Base64.getUrlEncoder().encodeToString(byteOutput.toByteArray());
             } catch (Exception e) {
@@ -70,23 +70,22 @@ public class PasteContent {
         @SerializedName("xz")
         XZ(string -> string); // TODO
 
-        private final Function<String, String> processor;
+        private final @NotNull Function<String, String> processor;
 
-        ContentType(Function<String, String> processor) {
+        ContentType(@NotNull Function<String, String> processor) {
             this.processor = processor;
         }
 
-        public Function<String, String> getProcessor() {
-            return this.processor;
+        public String process(String strToProcess) {
+            return this.processor.apply(strToProcess);
         }
     }
 
     @SuppressWarnings("unused")
-    private final ContentType format;
+    private final @NotNull ContentType format;
     @SuppressWarnings("unused")
-    private final String value;
-
-    private transient String processedValue;
+    private final @NotNull String value;
+    private transient @Nullable String processedValue;
 
     /**
      * Constructs a paste content.
@@ -94,12 +93,12 @@ public class PasteContent {
      * @param format format of the content
      * @param value content
      */
-    public PasteContent(ContentType format, String value) {
+    public PasteContent(final @NotNull ContentType format, final @Nullable String value) {
         if (format == ContentType.XZ) {
             throw new UnsupportedOperationException("XZ not presently supported");
         }
         this.format = format;
-        this.value = format.getProcessor().apply(value);
+        this.value = format.process(value);
         this.processedValue = value;
     }
 

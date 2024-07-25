@@ -24,20 +24,23 @@
 package org.kitteh.pastegg;
 
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Date;
 import java.util.Optional;
 
 public class Paste {
-    private final String id;
-    private final String deletion_key;
-    private final Visibility visibility;
-    private Date expires;
+    private final @NotNull String id;
+    private final @Nullable String deletion_key;
+    private final @NotNull Visibility visibility;
+    private @Nullable Date expires;
     @SerializedName("created_at")
-    private Date createdAt;
+    private @Nullable Date createdAt;
     @SerializedName("updated_at")
-    private Date updatedAt;
+    private @Nullable Date updatedAt;
 
     /**
      * Constructs a paste without a deletion key.
@@ -47,30 +50,32 @@ public class Paste {
     public Paste(String id) {
         this(id, null);
     }
+
     /**
      * Constructs a paste.
      *
      * @param id          id
      * @param deletionKey deletion key, or null
      */
-    public Paste(String id, String deletionKey) {
+    public Paste(@NotNull String id, @Nullable String deletionKey) {
         this(id, deletionKey, Visibility.PUBLIC);
     }
-    public Paste(String id, String deletionKey, Visibility visibility) {
+
+    public Paste(@NotNull String id, @Nullable String deletionKey, @NotNull Visibility visibility) {
         this.id = id;
         this.deletion_key = deletionKey;
         this.visibility = visibility;
     }
 
-    public Date getExpires() {
+    public @Nullable Date getExpires() {
         return expires;
     }
 
-    public Date getCreatedAt() {
+    public @Nullable Date getCreatedAt() {
         return createdAt;
     }
 
-    public Date getUpdatedAt() {
+    public @Nullable Date getUpdatedAt() {
         return updatedAt;
     }
 
@@ -79,7 +84,7 @@ public class Paste {
      *
      * @return id
      */
-    public String getId() {
+    public @NotNull String getId() {
         return this.id;
     }
 
@@ -92,7 +97,7 @@ public class Paste {
         return Optional.ofNullable(this.deletion_key);
     }
 
-    public Visibility getVisibility() {
+    public @NotNull Visibility getVisibility() {
         return visibility;
     }
 }

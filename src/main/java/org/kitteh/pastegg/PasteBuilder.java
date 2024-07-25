@@ -23,6 +23,10 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.Gson;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -32,14 +36,13 @@ import java.util.Optional;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal", "WeakerAccess"})
 public class PasteBuilder {
+    private static final @NotNull Gson GSON = new Gson();
 
     @SuppressWarnings("unused")
     public static class PasteResult {
-
-        private String status;
-        private Paste result;
-        private String message;
-
+        private @NotNull String status;
+        private @Nullable Paste result;
+        private @Nullable String message;
 
         public Optional<Paste> getPaste() {
             return Optional.ofNullable(this.result);
@@ -49,18 +52,18 @@ public class PasteBuilder {
             return Optional.ofNullable(this.message);
         }
 
-        public String getStatus() {
+        public @NotNull String getStatus() {
             return status;
         }
     }
 
-    private Visibility visibility = Visibility.getDefault();
+    private @NotNull Visibility visibility = Visibility.getDefault();
     private String name;
-    private String expires = null;
     private boolean debug = false;
     private String apiKey;
     @SuppressWarnings({"TypeMayBeWeakened", "MismatchedQueryAndUpdateOfCollection"})
-    private final List<PasteFile> files = new LinkedList<>();
+    private final @NotNull List<@NotNull PasteFile> files = new LinkedList<>();
+    private @Nullable String expires;
 
     public PasteBuilder name(String name) {
         this.name = name;
@@ -68,17 +71,17 @@ public class PasteBuilder {
     }
 
     // ZonedDateTime.now( ZoneOffset.UTC ).plusSeconds(10)
-    public PasteBuilder expires(ZonedDateTime when) {
+    public PasteBuilder expires(@Nullable ZonedDateTime when) {
         this.expires = when == null ? null : when.format(DateTimeFormatter.ISO_INSTANT);
         return this;
     }
 
-    public PasteBuilder setApiKey(String key) {
+    public @NotNull PasteBuilder setApiKey(String key) {
         this.apiKey = key;
         return this;
     }
 
-    public PasteBuilder visibility(Visibility visibility) {
+    public @NotNull PasteBuilder visibility(@NotNull Visibility visibility) {
         this.visibility = visibility;
         return this;
     }
@@ -88,25 +91,25 @@ public class PasteBuilder {
      * @param debug boolean
      * @return PasteBuilder
      */
-    public PasteBuilder debug(boolean debug) {
+    public @NotNull PasteBuilder debug(boolean debug) {
         this.debug = debug;
         return this;
     }
 
 
-    public PasteBuilder addFile(PasteFile file) {
+    public @NotNull PasteBuilder addFile(@NotNull PasteFile file) {
         files.add(file);
         return this;
     }
 
-    public PasteResult build() throws InvalidPasteException {
+    public @Nullable PasteResult build() throws InvalidPasteException {
         if (visibility == Visibility.PRIVATE && apiKey == null) {
             throw new InvalidPasteException("No API Key Provided for Private Paste...");
         }
-        String toString = GsonProviderLol.GSON.toJson(this);
+        String toString = GSON.toJson(this);
         try {
             String result = ConnectionProvider.processPasteRequest(apiKey, toString,debug);
-            PasteResult pasteResult = GsonProviderLol.GSON.fromJson(result, PasteResult.class);
+            PasteResult pasteResult = GSON.fromJson(result, PasteResult.class);
             if (pasteResult.getPaste().isPresent()) {
                 PasteManager.addPaste(pasteResult.getPaste().get());
             }
