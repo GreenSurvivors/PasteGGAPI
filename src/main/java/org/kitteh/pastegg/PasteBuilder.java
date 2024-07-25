@@ -36,47 +36,28 @@ import java.util.Optional;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal", "WeakerAccess"})
 public class PasteBuilder {
-    private static final @NotNull Gson GSON = new Gson();
-
-    @SuppressWarnings("unused")
-    public static class PasteResult {
-        private @NotNull String status;
-        private @Nullable Paste result;
-        private @Nullable String message;
-
-        public Optional<Paste> getPaste() {
-            return Optional.ofNullable(this.result);
-        }
-
-        public Optional<String> getMessage() {
-            return Optional.ofNullable(this.message);
-        }
-
-        public @NotNull String getStatus() {
-            return status;
-        }
-    }
-
-    private @NotNull Visibility visibility = Visibility.getDefault();
-    private String name;
-    private boolean debug = false;
-    private String apiKey;
-    @SuppressWarnings({"TypeMayBeWeakened", "MismatchedQueryAndUpdateOfCollection"})
+    private final static @NotNull Gson GSON = new Gson();
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final @NotNull List<@NotNull PasteFile> files = new LinkedList<>();
-    private @Nullable String expires;
+    private @Nullable String apiKey = null;
+    private @NotNull Visibility visibility = Visibility.getDefault();
+    private @Nullable String name = null;
+    private @Nullable String expires = null;
+    // transient - don't send our debug to paste.gg
+    private transient boolean debug = false;
 
-    public PasteBuilder name(String name) {
+    public @NotNull PasteBuilder name(@Nullable String name) {
         this.name = name;
         return this;
     }
 
     // ZonedDateTime.now( ZoneOffset.UTC ).plusSeconds(10)
-    public PasteBuilder expires(@Nullable ZonedDateTime when) {
+    public @NotNull PasteBuilder expires(@Nullable ZonedDateTime when) {
         this.expires = when == null ? null : when.format(DateTimeFormatter.ISO_INSTANT);
         return this;
     }
 
-    public @NotNull PasteBuilder setApiKey(String key) {
+    public @NotNull PasteBuilder setApiKey(@Nullable String key) {
         this.apiKey = key;
         return this;
     }
@@ -88,39 +69,58 @@ public class PasteBuilder {
 
     /**
      * debug the connection.
-     * @param debug boolean
-     * @return PasteBuilder
      */
     public @NotNull PasteBuilder debug(boolean debug) {
         this.debug = debug;
         return this;
     }
 
-
     public @NotNull PasteBuilder addFile(@NotNull PasteFile file) {
         files.add(file);
         return this;
     }
 
-    public @Nullable PasteResult build() throws InvalidPasteException {
+    public @NotNull PasteResult build() throws InvalidPasteException {
         if (visibility == Visibility.PRIVATE && apiKey == null) {
             throw new InvalidPasteException("No API Key Provided for Private Paste...");
-        }
-        String toString = GSON.toJson(this);
-        try {
-            String result = ConnectionProvider.processPasteRequest(apiKey, toString,debug);
-            PasteResult pasteResult = GSON.fromJson(result, PasteResult.class);
-            if (pasteResult.getPaste().isPresent()) {
-                PasteManager.addPaste(pasteResult.getPaste().get());
-            }
-            return pasteResult;
-        } catch (IOException e) {
+        } else {
+            String toString = GSON.toJson(this);
 
-            InvalidPasteException invalid =
-                  new InvalidPasteException("Paste could not be sent to past.gg: "
-                        + e.getMessage());
-            invalid.addSuppressed(e);
-            throw invalid;
+            try {
+                String result = ConnectionProvider.processPasteRequest(apiKey, toString, debug);
+                PasteResult pasteResult = GSON.fromJson(result, PasteResult.class);
+                if (pasteResult.getPaste().isPresent()) {
+                    PasteManager.trackPaste(pasteResult.getPaste().get());
+                }
+
+                return pasteResult;
+            } catch (IOException e) {
+                InvalidPasteException invalid = new InvalidPasteException("Paste could not be sent to past.gg: " +
+                        e.getMessage());
+                invalid.addSuppressed(e);
+                throw invalid;
+            }
+        }
+    }
+
+    public static class PasteResult {
+        private @NotNull String status;
+        private @Nullable Paste result;
+        private @Nullable String message;
+
+        public PasteResult() {
+        }
+
+        public Optional<Paste> getPaste() {
+            return Optional.ofNullable(this.result);
+        }
+
+        public Optional<String> getMessage() {
+            return Optional.ofNullable(this.message);
+        }
+
+        public @NotNull String getStatus() {
+            return status;
         }
     }
 }

@@ -24,90 +24,90 @@
 package org.kitteh.pastegg;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
-/**
- * Created by Narimm on 28/02/2020.
- */
 public class ConnectionProvider {
-    private static Integer responseCode = null;
+    private static @Nullable Integer responseCode = null;
 
-    public static Integer getLastResponseCode() {
+    public static @Nullable Integer getLastResponseCode() {
         return responseCode;
     }
 
-    static @NotNull String processPasteRequest(@NotNull String key, String output) throws IOException {
-        return processPasteRequest(key, output,false);
+    protected static @NotNull String processPasteRequest(@Nullable String key, @NotNull String output) throws IOException {
+        return processPasteRequest(key, output, false);
     }
 
-    static String processPasteRequest(String key, String output, boolean debug) throws IOException {
+    protected static @NotNull String processPasteRequest(@Nullable String key, @NotNull String output, boolean debug) throws IOException {
         URL url = URI.create("https://api.paste.gg/v1/pastes").toURL();
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=" + StandardCharsets.UTF_8);
         conn.setDoOutput(true);
         if (key != null) {
             conn.setRequestProperty("Authorization", "Key " + key);
         }
+
         conn.setRequestProperty("Accept", "application/json");
+
         if (debug) {
             System.out.println("----------Connection--------------");
-            System.out.println(conn.toString());
+            System.out.println(conn);
             System.out.println("----------Output--------------");
             System.out.println(output);
             System.out.println("------------------------------");
         }
+
         try (OutputStream os = conn.getOutputStream()) {
             byte[] input = output.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
-        StringBuilder content = new StringBuilder();
+
+        // get responseCode
         try {
             responseCode = conn.getResponseCode();
-        }catch (IOException e){
-            InputStream in = conn.getErrorStream();
-            if (in != null) {
-                InputStreamReader reader = new InputStreamReader(in,StandardCharsets.UTF_8);
-                BufferedReader errorIn = new BufferedReader(reader);
-                String inputLine;
-                while ((inputLine = errorIn.readLine()) != null) {
-                    content.append(inputLine);
+        } catch (IOException e) {
+            try (InputStream in = conn.getErrorStream()) {
+
+                if (in != null && debug) {
+                    try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
+                         BufferedReader errorIn = new BufferedReader(reader)) {
+
+                        String error = errorIn.lines().collect(Collectors.joining());
+                        System.out.println("----------Error Response--------------");
+                        System.out.println(error);
+                        System.out.println("------------------------------");
+                    }
                 }
-                if ( debug ) {
-                    System.out.println("----------Error Response--------------");
-                    System.out.println(content.toString());
-                    System.out.println("------------------------------");
-                }
-                throw new IOException(e.getMessage() + " Error Data: " + content.toString());
             }
-            throw e;
+
+            throw new IOException(e); // rethrow and exit this methode
         }
-        try (
-              InputStream stream = conn.getInputStream();
-              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
-              BufferedReader in = new BufferedReader(reader)) {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-        }
-        return content.toString();
+
+        try (InputStream stream = conn.getInputStream();
+             InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+             BufferedReader in = new BufferedReader(reader)) {
+
+            return in.lines().collect(Collectors.joining());
+        } // other exit is via exception
     }
 
-    public static boolean deletePaste(String pasteId, String deletionKey) throws IOException{
-        URL url = new URL("https://api.paste.gg/v1/pastes/"+pasteId);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    public static boolean deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
+        URL url = URI.create("https://api.paste.gg/v1/pastes/" + pasteId).toURL();
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+
         conn.setRequestMethod("DELETE");
-        String key = "Key "+deletionKey;
-        conn.setRequestProperty("Authorization",key);
+        String key = "Key " + deletionKey;
+
+        conn.setRequestProperty("Authorization", key);
         conn.connect();
 
-        int responseCode = conn.getResponseCode();
-        return responseCode == 204;
+        return conn.getResponseCode() == 204;
     }
 }

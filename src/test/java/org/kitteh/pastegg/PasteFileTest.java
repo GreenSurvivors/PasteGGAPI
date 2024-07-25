@@ -5,28 +5,27 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * Created by Narimm on 4/03/2020.
- */
 public class PasteFileTest {
     private PasteFile test;
+
     @Before
-    public void Setup(){
-        test = new PasteFile("1","Test",
-              new PasteContent(PasteContent.ContentType.TEXT,"HELLO WORLD"));
+    public void Setup() {
+        test = new PasteFile("1", "Test",
+                new PasteContent(PasteContentFormat.TEXT, "HELLO WORLD"));
     }
+
     @Test
     public void getContent() {
-        assertEquals(test.getContent().getValue(),"HELLO WORLD");
+        assertEquals("HELLO WORLD", test.content().getValue());
     }
 
     @Test
     public void getId() {
-        assertEquals(test.getId(),"1");
+        assertEquals("1", test.id());
     }
 
     @Test
     public void getName() {
-        assertEquals("Test",test.getName());
+        assertEquals("Test", test.name());
     }
 }

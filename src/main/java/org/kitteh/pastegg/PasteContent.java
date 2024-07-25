@@ -23,86 +23,31 @@
  */
 package org.kitteh.pastegg;
 
-import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.ByteArrayOutputStream;
-import java.util.Base64;
-import java.util.function.Function;
-import java.util.zip.GZIPOutputStream;
-
 public class PasteContent {
-    public enum ContentType {
-        /**
-         * QmFzZTY0IGVuY29kZWQgY29udGVudC4=
-         */
-        @SerializedName("base64")
-        BASE64(string -> Base64.getUrlEncoder().encodeToString(string.getBytes())),
-        /**
-         * GZIP encoded content.
-         */
-        @SerializedName("gzip")
-        GZIP(string -> {
-            byte[] bytes = string.getBytes();
-
-            try {
-                ByteArrayOutputStream byteOutput = new ByteArrayOutputStream(bytes.length);
-                try (byteOutput) {
-                    try (GZIPOutputStream gzipOutput = new GZIPOutputStream(byteOutput)) {
-                        gzipOutput.write(bytes);
-                    }
-                }
-                return Base64.getUrlEncoder().encodeToString(byteOutput.toByteArray());
-            } catch (Exception e) {
-                throw new RuntimeException(); // TODO
-            }
-        }
-        ),
-        /**
-         * Just give me the text!
-         */
-        @SerializedName("text")
-        TEXT(string -> string),
-        /**
-         * XZ is presently unsupported.
-         */
-        @SerializedName("xz")
-        XZ(string -> string); // TODO
-
-        private final @NotNull Function<String, String> processor;
-
-        ContentType(@NotNull Function<String, String> processor) {
-            this.processor = processor;
-        }
-
-        public String process(String strToProcess) {
-            return this.processor.apply(strToProcess);
-        }
-    }
-
     @SuppressWarnings("unused")
-    private final @NotNull ContentType format;
-    @SuppressWarnings("unused")
+    private final @NotNull PasteContentFormat format;
     private final @NotNull String value;
-    private transient @Nullable String processedValue;
+    private transient @Nullable String processedValue; // todo
 
     /**
      * Constructs a paste content.
      *
      * @param format format of the content
-     * @param value content
+     * @param value  content
      */
-    public PasteContent(final @NotNull ContentType format, final @Nullable String value) {
-        if (format == ContentType.XZ) {
+    public PasteContent(final @NotNull PasteContentFormat format, final @Nullable String value) {
+        if (format == PasteContentFormat.XZ) {
             throw new UnsupportedOperationException("XZ not presently supported");
         }
         this.format = format;
-        this.value = format.process(value);
+        this.value = format.encode(value);
         this.processedValue = value;
     }
 
-    public String getValue() {
+    public @NotNull String getValue() {
         if (this.processedValue == null) {
             // TODO magic
         }

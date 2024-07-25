@@ -23,11 +23,10 @@
  */
 package org.kitteh.pastegg;
 
-
+import com.google.gson.annotations.SerializedName;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.google.gson.annotations.SerializedName;
 
 import java.util.Date;
 import java.util.Optional;
@@ -43,16 +42,16 @@ public class Paste {
     private @Nullable Date updatedAt;
 
     /**
-     * Constructs a paste without a deletion key.
+     * Constructs a public paste without a deletion key.
      *
      * @param id id
      */
-    public Paste(String id) {
+    public Paste(@NotNull String id) {
         this(id, null);
     }
 
     /**
-     * Constructs a paste.
+     * Constructs a public paste.
      *
      * @param id          id
      * @param deletionKey deletion key, or null
@@ -61,9 +60,9 @@ public class Paste {
         this(id, deletionKey, Visibility.PUBLIC);
     }
 
-    public Paste(@NotNull String id, @Nullable String deletionKey, @NotNull Visibility visibility) {
+    public Paste(@NotNull String id, @Nullable String deletion_key, @NotNull Visibility visibility) {
         this.id = id;
-        this.deletion_key = deletionKey;
+        this.deletion_key = deletion_key;
         this.visibility = visibility;
     }
 
@@ -93,7 +92,8 @@ public class Paste {
      *
      * @return deletion key or empty if not anonymous
      */
-    public Optional<String> getDeletionKey() {
+    @Contract(pure = true)
+    public @NotNull Optional<String> getDeletionKey() {
         return Optional.ofNullable(this.deletion_key);
     }
 

@@ -26,30 +26,9 @@ package org.kitteh.pastegg;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class PasteFile {
-    private final @Nullable String id;
-    private final @NotNull String name;
-    private final @NotNull PasteContent content;
+public record PasteFile(@Nullable String id, @NotNull String name, @NotNull PasteContent content) {
 
-    public PasteFile(@Nullable String id, @NotNull String name, @NotNull PasteContent content) {
-        this.id = id;
-        this.name = name;
-        this.content = content;
-    }
-
-    public PasteFile(String name, PasteContent content) {
+    public PasteFile(@NotNull String name, @NotNull PasteContent content) {
         this(null, name, content);
-    }
-
-    public @NotNull PasteContent getContent() {
-        return this.content;
-    }
-
-    public @Nullable String getId() {
-        return this.id;
-    }
-
-    public @NotNull String getName() {
-        return this.name;
     }
 }
