@@ -35,6 +35,7 @@ public class Paste {
     private final @NotNull String id;
     private final @Nullable String deletion_key;
     private final @NotNull Visibility visibility;
+    private final @Nullable String description;
     private @Nullable Date expires;
     @SerializedName("created_at")
     private @Nullable Date createdAt;
@@ -61,9 +62,14 @@ public class Paste {
     }
 
     public Paste(@NotNull String id, @Nullable String deletion_key, @NotNull Visibility visibility) {
+        this(id, deletion_key, visibility, null);
+    }
+
+    public Paste(@NotNull String id, @Nullable String deletion_key, @NotNull Visibility visibility, @Nullable String description) {
         this.id = id;
         this.deletion_key = deletion_key;
         this.visibility = visibility;
+        this.description = description;
     }
 
     public @Nullable Date getExpires() {
@@ -99,5 +105,9 @@ public class Paste {
 
     public @NotNull Visibility getVisibility() {
         return visibility;
+    }
+
+    public @Nullable String getDescription() {
+        return description;
     }
 }

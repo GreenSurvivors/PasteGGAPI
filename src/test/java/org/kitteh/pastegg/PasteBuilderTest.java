@@ -23,6 +23,7 @@ public class PasteBuilderTest {
                 .visibility(Visibility.UNLISTED)
                 .expires(time)
                 .debug(true)
+                .description("this is a test.")
                 .build();
         assertTrue(result.getPaste().isPresent());
         assertFalse(result.getMessage().isPresent());
@@ -31,11 +32,12 @@ public class PasteBuilderTest {
         assertNotNull(paste.getExpires());
         assertEquals(Visibility.UNLISTED, paste.getVisibility());
         assertTrue(paste.getDeletionKey().isPresent());
+        assertEquals("this is a test.", paste.getDescription());
         Integer val = 201;
         assertEquals(val, ConnectionProvider.getLastResponseCode());
         try {
-            boolean yes = ConnectionProvider.deletePaste(paste.getId(), paste.getDeletionKey().get());
-            assertTrue(yes);
+            boolean wasDeleted = ConnectionProvider.deletePaste(paste.getId(), paste.getDeletionKey().get());
+            assertTrue(wasDeleted);
         } catch (IOException ignored) {
         }
 
@@ -72,12 +74,14 @@ public class PasteBuilderTest {
                     .setApiKey(apiKey)
                     .visibility(Visibility.PRIVATE)
                     .debug(true)
+                    .description("this is a test.")
                     .build();
             assertNotNull(result);
             assertTrue(result.getPaste().isPresent());
             Paste paste = result.getPaste().get();
             assertEquals(Visibility.PRIVATE, paste.getVisibility());
             assertFalse(paste.getDeletionKey().isPresent());
+            assertEquals("this is a test.", paste.getDescription());
             assertNotNull(paste.getId());
         } catch (SecurityException e) {
             e.printStackTrace();

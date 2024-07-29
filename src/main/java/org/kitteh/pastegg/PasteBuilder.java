@@ -43,6 +43,7 @@ public class PasteBuilder {
     private @NotNull Visibility visibility = Visibility.getDefault();
     private @Nullable String name = null;
     private @Nullable String expires = null;
+    private @Nullable String description = null;
     // transient - don't send our debug to paste.gg
     private transient boolean debug = false;
 
@@ -64,6 +65,11 @@ public class PasteBuilder {
 
     public @NotNull PasteBuilder visibility(@NotNull Visibility visibility) {
         this.visibility = visibility;
+        return this;
+    }
+
+    public @NotNull PasteBuilder description(@NotNull String description) {
+        this.description = description;
         return this;
     }
 
