@@ -16,7 +16,7 @@ public class PasteFileTest {
 
     @Test
     public void getContent() {
-        assertEquals("HELLO WORLD", test.content().getValue());
+        assertEquals("HELLO WORLD", test.content().getOriginalValue());
     }
 
     @Test

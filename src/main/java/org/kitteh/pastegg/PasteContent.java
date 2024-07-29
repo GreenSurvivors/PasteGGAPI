@@ -23,14 +23,16 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PasteContent {
     @SuppressWarnings("unused")
     private final @NotNull PasteContentFormat format;
-    private final @NotNull String value;
-    private transient @Nullable String processedValue; // todo
+    @SerializedName("value")
+    private final @NotNull String formattedValue;
+    private transient @Nullable String originalValue;
 
     /**
      * Constructs a paste content.
@@ -38,19 +40,21 @@ public class PasteContent {
      * @param format format of the content
      * @param value  content
      */
-    public PasteContent(final @NotNull PasteContentFormat format, final @Nullable String value) {
-        if (format == PasteContentFormat.XZ) {
-            throw new UnsupportedOperationException("XZ not presently supported");
-        }
+    public PasteContent(final @NotNull PasteContentFormat format, final @NotNull String value) {
         this.format = format;
-        this.value = format.encode(value);
-        this.processedValue = value;
+        this.formattedValue = format.encode(value);
+        this.originalValue = value;
     }
 
-    public @NotNull String getValue() {
-        if (this.processedValue == null) {
-            // TODO magic
+    public @Nullable String getOriginalValue() {
+        if (this.originalValue == null) {
+            originalValue = format.decode(formattedValue);
         }
-        return this.processedValue;
+
+        return this.originalValue;
+    }
+
+    public @NotNull String getFormattedValue() {
+        return this.formattedValue;
     }
 }

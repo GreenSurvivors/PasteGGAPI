@@ -15,7 +15,7 @@ public class PasteBuilderTest {
     @Test
     public void build() {
         PasteContent content = new PasteContent(PasteContentFormat.TEXT, "HELLO WORLD");
-        assertEquals("HELLO WORLD", content.getValue());
+        assertEquals("HELLO WORLD", content.getOriginalValue());
         ZonedDateTime time = ZonedDateTime.now().plusMinutes(1);
         PasteBuilder.PasteResult result = new PasteBuilder().name("TEST!").addFile(
                         new PasteFile("jkcclemens.txt",
