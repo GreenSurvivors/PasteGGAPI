@@ -23,28 +23,31 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+import org.kitteh.pastegg.pasteresult.APasteResult;
+import org.kitteh.pastegg.pasteresult.PasteResultError;
+import org.kitteh.pastegg.pasteresult.PasteResultSuccess;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 public class ConnectionProvider {
-    private static @Nullable Integer responseCode = null;
+    private final static @NotNull Gson GSON = new Gson();
 
-    public static @Nullable Integer getLastResponseCode() {
-        return responseCode;
-    }
-
-    protected static @NotNull String processPasteRequest(@Nullable String key, @NotNull String output) throws IOException {
+    public static @NotNull APasteResult processPasteRequest(@Nullable String key, @NotNull String output) throws IOException {
         return processPasteRequest(key, output, false);
     }
 
-    protected static @NotNull String processPasteRequest(@Nullable String key, @NotNull String output, boolean debug) throws IOException {
+    @VisibleForTesting
+    protected static @NotNull APasteResult processPasteRequest(@Nullable String key, @NotNull String output, boolean debug) throws IOException {
         URL url = URI.create("https://api.paste.gg/v1/pastes").toURL();
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -69,6 +72,7 @@ public class ConnectionProvider {
             os.write(input, 0, input.length);
         }
 
+        int responseCode;
         // get responseCode
         try {
             responseCode = conn.getResponseCode();
@@ -90,7 +94,16 @@ public class ConnectionProvider {
             throw new IOException(e); // rethrow and exit this methode
         }
 
-        try (InputStream stream = conn.getInputStream();
+        return switch (responseCode) {
+            case HttpsURLConnection.HTTP_CREATED ->
+                    GSON.fromJson(getResultAsString(conn, false), PasteResultSuccess.class);
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), PasteResultError.class);
+            default -> throw new ConnectException("Unexpected response code: " + responseCode);
+        };
+    }
+
+    private static @NotNull String getResultAsString(final @NotNull HttpsURLConnection conn, boolean error) throws IOException {
+        try (InputStream stream = error ? conn.getErrorStream() : conn.getInputStream();
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
              BufferedReader in = new BufferedReader(reader)) {
 
@@ -98,7 +111,10 @@ public class ConnectionProvider {
         } // other exit is via exception
     }
 
-    public static boolean deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
+    /**
+     * @return null if successful, PasteResultError if the server answered with one of those, throws an IOException otherwise
+     */
+    public static @Nullable PasteResultError deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
         URL url = URI.create("https://api.paste.gg/v1/pastes/" + pasteId).toURL();
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
 
@@ -108,6 +124,11 @@ public class ConnectionProvider {
         conn.setRequestProperty("Authorization", key);
         conn.connect();
 
-        return conn.getResponseCode() == 204;
+        int responseCode = conn.getResponseCode();
+        return switch (responseCode) {
+            case HttpsURLConnection.HTTP_NO_CONTENT -> null;
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), PasteResultError.class);
+            default -> throw new ConnectException("Unexpected response code: " + responseCode);
+        };
     }
 }

@@ -26,13 +26,15 @@ package org.kitteh.pastegg;
 import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+import org.kitteh.pastegg.pasteresult.APasteResult;
+import org.kitteh.pastegg.pasteresult.PasteResultSuccess;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal", "WeakerAccess"})
 public class PasteBuilder {
@@ -76,7 +78,8 @@ public class PasteBuilder {
     /**
      * debug the connection.
      */
-    public @NotNull PasteBuilder debug(boolean debug) {
+    @VisibleForTesting
+    protected @NotNull PasteBuilder debug(boolean debug) {
         this.debug = debug;
         return this;
     }
@@ -86,47 +89,28 @@ public class PasteBuilder {
         return this;
     }
 
-    public @NotNull PasteResult build() throws InvalidPasteException {
+    /**
+     * Please note: the result of this Build is NOT a {@link Paste},
+     * but the created paste will already be uploaded to paste.gg,
+     * and instead the answer of the server will get returned.
+     */
+    public @NotNull APasteResult build() throws InvalidPasteException, IOException {
         if (visibility == Visibility.PRIVATE && apiKey == null) {
             throw new InvalidPasteException("No API Key Provided for Private Paste...");
         } else {
             String toString = GSON.toJson(this);
 
             try {
-                String result = ConnectionProvider.processPasteRequest(apiKey, toString, debug);
-                PasteResult pasteResult = GSON.fromJson(result, PasteResult.class);
-                if (pasteResult.getPaste().isPresent()) {
-                    PasteManager.trackPaste(pasteResult.getPaste().get());
+                APasteResult result = ConnectionProvider.processPasteRequest(apiKey, toString, debug);
+
+                if (result instanceof PasteResultSuccess pasteResultSuccess && pasteResultSuccess.getPaste() != null) {
+                    PasteManager.trackPaste(pasteResultSuccess.getPaste());
                 }
 
-                return pasteResult;
+                return result;
             } catch (IOException e) {
-                InvalidPasteException invalid = new InvalidPasteException("Paste could not be sent to past.gg: " +
-                        e.getMessage());
-                invalid.addSuppressed(e);
-                throw invalid;
+                throw new IOException("Paste could not be sent to past.gg", e);
             }
-        }
-    }
-
-    public static class PasteResult {
-        private @NotNull String status;
-        private @Nullable Paste result;
-        private @Nullable String message;
-
-        public PasteResult() {
-        }
-
-        public Optional<Paste> getPaste() {
-            return Optional.ofNullable(this.result);
-        }
-
-        public Optional<String> getMessage() {
-            return Optional.ofNullable(this.message);
-        }
-
-        public @NotNull String getStatus() {
-            return status;
         }
     }
 }
