@@ -21,26 +21,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.kitteh.pastegg.pasteresult;
+package org.kitteh.pastegg.reply;
 
-import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public abstract class APasteResult {
-    private final @NotNull PasteStatus status;
-
-    protected APasteResult(@NotNull PasteStatus status) {
-        this.status = status;
-    }
-
-    public @NotNull PasteStatus getStatus() {
-        return status;
-    }
-
-    public enum PasteStatus {
-        @SerializedName("error")
-        ERROR,
-        @SerializedName("success")
-        SUCCESS
-    }
+public record ErrorReply(
+        @NotNull ReplyStatus status,
+        @NotNull String error,
+        @Nullable String message) implements IReply {
 }

@@ -23,12 +23,56 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record PasteFile(@Nullable String id, @NotNull String name, @NotNull PasteContent content) {
+/**
+ * a paste contains at least one or more files
+ */
+public record PasteFile(
+        @Nullable String name,
+        @NotNull PasteContent content,
+        @SerializedName("highlight_language") @Nullable HighlightLanguage highlightLanguage) {
 
-    public PasteFile(@NotNull String name, @NotNull PasteContent content) {
-        this(null, name, content);
+    public PasteFile(@Nullable String name, @NotNull PasteContent content) {
+        this(name, content, null);
+    }
+
+    /**
+     * The name can be null, if the file was created by the client, but the server will assign default names.
+     * However, you can delete the name again, and it will become null, the id can't be changed, after it was assigned.
+     */
+    @Override
+    public @Nullable String name() {
+        return name;
+    }
+
+    public @NotNull PasteContent content() {
+        return content;
+    }
+
+    @Override
+    public @Nullable HighlightLanguage highlightLanguage() {
+        return highlightLanguage;
+    }
+
+    @Override
+    public @NotNull String toString() {
+        StringBuilder builder = new StringBuilder("{");
+
+        if (name != null) {
+            builder.append("\"name\":\"").append(name).append("\", ");
+        }
+
+        if (highlightLanguage != null) {
+            builder.append("\"highlightLanguage\":\"").append(highlightLanguage).append("\", ");
+        }
+
+        builder.append("\"content\":{").append(content).append("}");
+
+        builder.append("}");
+
+        return builder.toString();
     }
 }

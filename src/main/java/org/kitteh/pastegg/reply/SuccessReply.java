@@ -21,26 +21,15 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.kitteh.pastegg.pasteresult;
+package org.kitteh.pastegg.reply;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.kitteh.pastegg.reply.content.PasteResult;
 
-public class PasteResultError extends APasteResult {
-    private final @NotNull String error;
-    private final @Nullable String message;
-
-    public PasteResultError(@NotNull APasteResult.PasteStatus status, @NotNull String error, @Nullable String message) {
-        super(status);
-        this.error = error;
-        this.message = message;
-    }
-
-    public @NotNull String getError() {
-        return error;
-    }
-
-    public @Nullable String getMessage() {
-        return message;
-    }
+/**
+ * The server responds with status == "success" and the paste result
+ */
+public record SuccessReply(
+        @NotNull ReplyStatus status,
+        @NotNull PasteResult result) implements IReply {
 }

@@ -24,12 +24,14 @@
 package org.kitteh.pastegg;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
-import org.kitteh.pastegg.pasteresult.APasteResult;
-import org.kitteh.pastegg.pasteresult.PasteResultError;
-import org.kitteh.pastegg.pasteresult.PasteResultSuccess;
+import org.kitteh.pastegg.client.Paste;
+import org.kitteh.pastegg.reply.ErrorReply;
+import org.kitteh.pastegg.reply.IReply;
+import org.kitteh.pastegg.reply.SuccessReply;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
@@ -40,14 +42,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 public class ConnectionProvider {
-    private final static @NotNull Gson GSON = new Gson();
+    @VisibleForTesting
+    protected final static @NotNull Gson GSON;
 
-    public static @NotNull APasteResult processPasteRequest(@Nullable String key, @NotNull String output) throws IOException {
-        return processPasteRequest(key, output, false);
+    static {
+        GsonBuilder builder = new GsonBuilder();
+
+        builder.registerTypeAdapter(HighlightLanguage.class, new HighlightLanguage.TypeAdapter());
+
+        GSON = builder.create();
+    }
+
+    public static @NotNull IReply processPasteRequest(@Nullable String key, @NotNull Paste paste) throws IOException {
+        return processPasteRequest(key, paste, false);
     }
 
     @VisibleForTesting
-    protected static @NotNull APasteResult processPasteRequest(@Nullable String key, @NotNull String output, boolean debug) throws IOException {
+    protected static @NotNull IReply processPasteRequest(@Nullable String key, @NotNull Paste paste, boolean debug) throws IOException {
+        final String jsonOutput = GSON.toJson(paste);
+
         URL url = URI.create("https://api.paste.gg/v1/pastes").toURL();
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -63,12 +76,12 @@ public class ConnectionProvider {
             System.out.println("----------Connection--------------");
             System.out.println(conn);
             System.out.println("----------Output--------------");
-            System.out.println(output);
+            System.out.println(jsonOutput);
             System.out.println("------------------------------");
         }
 
         try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = output.getBytes(StandardCharsets.UTF_8);
+            byte[] input = jsonOutput.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
 
@@ -95,9 +108,8 @@ public class ConnectionProvider {
         }
 
         return switch (responseCode) {
-            case HttpsURLConnection.HTTP_CREATED ->
-                    GSON.fromJson(getResultAsString(conn, false), PasteResultSuccess.class);
-            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), PasteResultError.class);
+            case HttpsURLConnection.HTTP_CREATED -> GSON.fromJson(getResultAsString(conn, false), SuccessReply.class);
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), ErrorReply.class);
             default -> throw new ConnectException("Unexpected response code: " + responseCode);
         };
     }
@@ -114,7 +126,7 @@ public class ConnectionProvider {
     /**
      * @return null if successful, PasteResultError if the server answered with one of those, throws an IOException otherwise
      */
-    public static @Nullable PasteResultError deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
+    public static @Nullable ErrorReply deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
         URL url = URI.create("https://api.paste.gg/v1/pastes/" + pasteId).toURL();
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
 
@@ -127,7 +139,7 @@ public class ConnectionProvider {
         int responseCode = conn.getResponseCode();
         return switch (responseCode) {
             case HttpsURLConnection.HTTP_NO_CONTENT -> null;
-            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), PasteResultError.class);
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), ErrorReply.class);
             default -> throw new ConnectException("Unexpected response code: " + responseCode);
         };
     }

@@ -23,38 +23,15 @@
  */
 package org.kitteh.pastegg;
 
-import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class PasteContent {
-    @SuppressWarnings("unused")
-    private final @NotNull PasteContentFormat format;
-    @SerializedName("value")
-    private final @NotNull String formattedValue;
-    private transient @Nullable String originalValue;
-
-    /**
-     * Constructs a paste content.
-     *
-     * @param format format of the content
-     * @param value  content
-     */
-    public PasteContent(final @NotNull PasteContentFormat format, final @NotNull String value) {
-        this.format = format;
-        this.formattedValue = format.encode(value);
-        this.originalValue = value;
-    }
-
-    public @Nullable String getOriginalValue() {
-        if (this.originalValue == null) {
-            originalValue = format.decode(formattedValue);
-        }
-
-        return this.originalValue;
-    }
-
-    public @NotNull String getFormattedValue() {
-        return this.formattedValue;
-    }
+/**
+ * Be careful when creating a new instance to NOT insert your unformatted data as value!
+ * The paste server might reject that!
+ *
+ * @param value the encoded value. Have a look into {@link org.kitteh.pastegg.client.FormatCodec} to see,
+ *              how to easily convert data to the format (and back)
+ * @see org.kitteh.pastegg.client.FormatCodec
+ */
+public record PasteContent(@NotNull PasteContentFormat format, @NotNull String value) {
 }

@@ -17,3 +17,4 @@ This repository history will be entirely rewritten at some point. Just FYI.
     - [ ] get paste specific files raw
 - [ ] patch pastes / files of a paste
 - [ ] add files to existing pastes
+- [ ] allow to hook into other servers - as long as they use Anna's paste software

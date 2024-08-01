@@ -26,14 +26,15 @@ package org.kitteh.pastegg;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.kitteh.pastegg.pasteresult.PasteResultError;
+import org.kitteh.pastegg.reply.ErrorReply;
+import org.kitteh.pastegg.reply.content.PasteResult;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class PasteManager {
-    private static final @NotNull Map<@NotNull String /* id*/, Paste> sessionPastes = new HashMap<>();
+    private static final @NotNull Map<@NotNull String /* id*/, PasteResult> sessionPastes = new HashMap<>();
     private static @Nullable String apiKey;
 
     /**
@@ -65,10 +66,10 @@ public class PasteManager {
     /**
      * Add a paste.
      *
-     * @param paste the paste to add
+     * @param result the result to add
      */
-    protected static void trackPaste(@NotNull Paste paste) {
-        sessionPastes.put(paste.getId(), paste);
+    protected static void trackPaste(@NotNull PasteResult result) {
+        sessionPastes.put(result.id(), result);
     }
 
     /**
@@ -84,13 +85,13 @@ public class PasteManager {
      * @see #deletePaste(String, String)
      */
     public static boolean deletePaste(@NotNull String id) throws InvalidPasteException, IOException {
-        Paste paste = sessionPastes.get(id);
-        if (paste == null) {
+        PasteResult result = sessionPastes.get(id);
+        if (result == null) {
             return false;
         } else {
             String pasteKey;
-            if (paste.getDeletionKey().isPresent()) {
-                pasteKey = paste.getDeletionKey().get();
+            if (result.deletionKey() != null) {
+                pasteKey = result.deletionKey();
             } else {
                 if (apiKey == null) {
                     return false;
@@ -99,7 +100,7 @@ public class PasteManager {
                 pasteKey = apiKey;
             }
 
-            return deletePaste(paste.getId(), pasteKey) != null;
+            return deletePaste(result.id(), pasteKey) != null;
         }
     }
 
@@ -114,7 +115,7 @@ public class PasteManager {
      * @throws InvalidPasteException if something unexpected happens
      * @see #deletePaste(String)
      */
-    public static @Nullable PasteResultError deletePaste(@NotNull String id, @NotNull String deletionKey) throws IOException {
+    public static @Nullable ErrorReply deletePaste(@NotNull String id, @NotNull String deletionKey) throws IOException {
         try {
             return ConnectionProvider.deletePaste(id, deletionKey);
         } catch (IOException e) {

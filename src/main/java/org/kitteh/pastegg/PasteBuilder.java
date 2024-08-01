@@ -23,40 +23,29 @@
  */
 package org.kitteh.pastegg;
 
-import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
-import org.kitteh.pastegg.pasteresult.APasteResult;
-import org.kitteh.pastegg.pasteresult.PasteResultSuccess;
+import org.kitteh.pastegg.client.Paste;
+import org.kitteh.pastegg.reply.IReply;
+import org.kitteh.pastegg.reply.SuccessReply;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
-import java.util.List;
 
-@SuppressWarnings({"unused", "FieldCanBeLocal", "WeakerAccess"})
 public class PasteBuilder {
-    private final static @NotNull Gson GSON = new Gson();
-    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-    private final @NotNull List<@NotNull PasteFile> files = new LinkedList<>();
+    private final Paste paste = new Paste();
     private @Nullable String apiKey = null;
-    private @NotNull Visibility visibility = Visibility.getDefault();
-    private @Nullable String name = null;
-    private @Nullable String expires = null;
-    private @Nullable String description = null;
-    // transient - don't send our debug to paste.gg
-    private transient boolean debug = false;
+    private boolean debug = false;
 
     public @NotNull PasteBuilder name(@Nullable String name) {
-        this.name = name;
+        this.paste.setName(name);
         return this;
     }
 
     // ZonedDateTime.now( ZoneOffset.UTC ).plusSeconds(10)
     public @NotNull PasteBuilder expires(@Nullable ZonedDateTime when) {
-        this.expires = when == null ? null : when.format(DateTimeFormatter.ISO_INSTANT);
+        this.paste.setExpirationDate(when);
         return this;
     }
 
@@ -66,12 +55,12 @@ public class PasteBuilder {
     }
 
     public @NotNull PasteBuilder visibility(@NotNull Visibility visibility) {
-        this.visibility = visibility;
+        this.paste.setVisibility(visibility);
         return this;
     }
 
     public @NotNull PasteBuilder description(@NotNull String description) {
-        this.description = description;
+        this.paste.setDescription(description);
         return this;
     }
 
@@ -85,7 +74,7 @@ public class PasteBuilder {
     }
 
     public @NotNull PasteBuilder addFile(@NotNull PasteFile file) {
-        files.add(file);
+        this.paste.addFile(file);
         return this;
     }
 
@@ -94,23 +83,24 @@ public class PasteBuilder {
      * but the created paste will already be uploaded to paste.gg,
      * and instead the answer of the server will get returned.
      */
-    public @NotNull APasteResult build() throws InvalidPasteException, IOException {
-        if (visibility == Visibility.PRIVATE && apiKey == null) {
+    public @NotNull IReply build() throws InvalidPasteException, IOException {
+        if (paste.getVisibility() == Visibility.PRIVATE && apiKey == null) {
             throw new InvalidPasteException("No API Key Provided for Private Paste...");
-        } else {
-            String toString = GSON.toJson(this);
+        }
+        if (paste.getFiles().isEmpty()) {
+            throw new InvalidPasteException("At least one file has to be added to the paste!");
+        }
 
-            try {
-                APasteResult result = ConnectionProvider.processPasteRequest(apiKey, toString, debug);
+        try {
+            IReply result = ConnectionProvider.processPasteRequest(apiKey, paste, debug);
 
-                if (result instanceof PasteResultSuccess pasteResultSuccess && pasteResultSuccess.getPaste() != null) {
-                    PasteManager.trackPaste(pasteResultSuccess.getPaste());
-                }
-
-                return result;
-            } catch (IOException e) {
-                throw new IOException("Paste could not be sent to past.gg", e);
+            if (result instanceof SuccessReply successReplySingle) {
+                PasteManager.trackPaste(successReplySingle.result());
             }
+
+            return result;
+        } catch (IOException e) {
+            throw new IOException("Paste could not be sent to past.gg", e);
         }
     }
 }
