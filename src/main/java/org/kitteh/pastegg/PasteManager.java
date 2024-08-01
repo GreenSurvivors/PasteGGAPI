@@ -100,7 +100,7 @@ public class PasteManager {
                 pasteKey = apiKey;
             }
 
-            return deletePaste(result.id(), pasteKey) != null;
+            return deletePaste(result.id(), pasteKey) == null;
         }
     }
 

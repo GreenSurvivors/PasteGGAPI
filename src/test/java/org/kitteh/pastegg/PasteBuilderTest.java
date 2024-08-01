@@ -86,21 +86,13 @@ public class PasteBuilderTest {
         assertNull(result.files()[0].highlightLanguage());
         System.out.println("Successful paste status: " + reply.status());
 
-        ErrorReply deletionResult = ConnectionProvider.deletePaste(result.id(), result.deletionKey());
-
-        if (deletionResult != null) {
-            System.out.println("Error when trying to delete the paste: " + deletionResult.error());
-
-            if (deletionResult.message() != null) {
-                System.out.println("Error message: " + deletionResult.message());
-            }
-
+        if (!PasteManager.deletePaste(result.id())) {
             fail();
         }
     }
 
     @Test
-    public void base64Png() throws IOException {
+    public void base64Png() throws IOException { // from https://iconarchive.com
         try (InputStream in = getClass().getResourceAsStream("/Cute-Cow-icon.png")) {
             PasteContent content = FormatCodec.BYTES_TO_BASE_64.encode(in.readAllBytes());
             ZonedDateTime time = ZonedDateTime.now().plusMinutes(1);
@@ -116,6 +108,21 @@ public class PasteBuilderTest {
             assertTrue(reply instanceof SuccessReply);
             SuccessReply successReplySingle = (SuccessReply) reply;
             assertNotNull(successReplySingle.result());
+            PasteResult result = successReplySingle.result();
+            assertNotNull(result.id());
+            assertNotNull(result.deletionKey());
+
+            ErrorReply deletionResult = PasteManager.deletePaste(result.id(), result.deletionKey());
+
+            if (deletionResult != null) {
+                System.out.println("Error when trying to delete the paste: " + deletionResult.error());
+
+                if (deletionResult.message() != null) {
+                    System.out.println("Error message: " + deletionResult.message());
+                }
+
+                fail();
+            }
         }
     }
 
