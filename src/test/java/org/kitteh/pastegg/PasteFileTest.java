@@ -2,31 +2,36 @@ package org.kitteh.pastegg;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.kitteh.pastegg.client.FormatCodec;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
-/**
- * Created by Narimm on 4/03/2020.
- */
 public class PasteFileTest {
     private PasteFile test;
+
     @Before
-    public void Setup(){
-        test = new PasteFile("1","Test",
-              new PasteContent(PasteContent.ContentType.TEXT,"HELLO WORLD"));
-    }
-    @Test
-    public void getContent() {
-        assertEquals(test.getContent().getValue(),"HELLO WORLD");
+    public void Setup() {
+        test = new PasteFile("Test", FormatCodec.TEXT_TO_TEXT.encode("HELLO WORLD"), HighlightLanguage.Java);
     }
 
     @Test
-    public void getId() {
-        assertEquals(test.getId(),"1");
+    public void getContent() {
+        assertNotNull(test.content().value());
+    }
+
+    @Test
+    public void getFormat() {
+        assertEquals(PasteContentFormat.TEXT, test.content().format());
+    }
+
+    @Test
+    public void getHighlightLanguage() {
+        assertEquals(HighlightLanguage.Java, test.highlightLanguage());
     }
 
     @Test
     public void getName() {
-        assertEquals("Test",test.getName());
+        assertEquals("Test", test.name());
     }
 }

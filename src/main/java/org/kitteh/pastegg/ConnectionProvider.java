@@ -23,91 +23,124 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+import org.kitteh.pastegg.client.Paste;
+import org.kitteh.pastegg.reply.ErrorReply;
+import org.kitteh.pastegg.reply.IReply;
+import org.kitteh.pastegg.reply.SuccessReply;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
-import java.net.HttpURLConnection;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
-/**
- * Created by Narimm on 28/02/2020.
- */
 public class ConnectionProvider {
-    private static Integer responseCode = null;
+    @VisibleForTesting
+    protected final static @NotNull Gson GSON;
 
-    public static Integer getLastResponseCode() {
-        return responseCode;
+    static {
+        GsonBuilder builder = new GsonBuilder();
+
+        builder.registerTypeAdapter(HighlightLanguage.class, new HighlightLanguage.TypeAdapter());
+
+        GSON = builder.create();
     }
 
-    static @NotNull String processPasteRequest(@NotNull String key, String output) throws IOException {
-        return processPasteRequest(key, output,false);
+    public static @NotNull IReply processPasteRequest(@Nullable String key, @NotNull Paste paste) throws IOException {
+        return processPasteRequest(key, paste, false);
     }
 
-    static String processPasteRequest(String key, String output, boolean debug) throws IOException {
+    @VisibleForTesting
+    protected static @NotNull IReply processPasteRequest(@Nullable String key, @NotNull Paste paste, boolean debug) throws IOException {
+        final String jsonOutput = GSON.toJson(paste);
+
         URL url = URI.create("https://api.paste.gg/v1/pastes").toURL();
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=" + StandardCharsets.UTF_8);
         conn.setDoOutput(true);
         if (key != null) {
             conn.setRequestProperty("Authorization", "Key " + key);
         }
+
         conn.setRequestProperty("Accept", "application/json");
+
         if (debug) {
             System.out.println("----------Connection--------------");
-            System.out.println(conn.toString());
+            System.out.println(conn);
             System.out.println("----------Output--------------");
-            System.out.println(output);
+            System.out.println(jsonOutput);
             System.out.println("------------------------------");
         }
+
         try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = output.getBytes(StandardCharsets.UTF_8);
+            byte[] input = jsonOutput.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
-        StringBuilder content = new StringBuilder();
+
+        int responseCode;
+        // get responseCode
         try {
             responseCode = conn.getResponseCode();
-        }catch (IOException e){
-            InputStream in = conn.getErrorStream();
-            if (in != null) {
-                InputStreamReader reader = new InputStreamReader(in,StandardCharsets.UTF_8);
-                BufferedReader errorIn = new BufferedReader(reader);
-                String inputLine;
-                while ((inputLine = errorIn.readLine()) != null) {
-                    content.append(inputLine);
+        } catch (IOException e) {
+            try (InputStream in = conn.getErrorStream()) {
+
+                if (in != null && debug) {
+                    try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
+                         BufferedReader errorIn = new BufferedReader(reader)) {
+
+                        String error = errorIn.lines().collect(Collectors.joining());
+                        System.out.println("----------Error Response--------------");
+                        System.out.println(error);
+                        System.out.println("------------------------------");
+                    }
                 }
-                if ( debug ) {
-                    System.out.println("----------Error Response--------------");
-                    System.out.println(content.toString());
-                    System.out.println("------------------------------");
-                }
-                throw new IOException(e.getMessage() + " Error Data: " + content.toString());
             }
-            throw e;
+
+            throw new IOException(e); // rethrow and exit this methode
         }
-        try (
-              InputStream stream = conn.getInputStream();
-              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
-              BufferedReader in = new BufferedReader(reader)) {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-        }
-        return content.toString();
+
+        return switch (responseCode) {
+            case HttpsURLConnection.HTTP_CREATED -> GSON.fromJson(getResultAsString(conn, false), SuccessReply.class);
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), ErrorReply.class);
+            default -> throw new ConnectException("Unexpected response code: " + responseCode);
+        };
     }
 
-    public static boolean deletePaste(String pasteId, String deletionKey) throws IOException{
-        URL url = new URL("https://api.paste.gg/v1/pastes/"+pasteId);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    private static @NotNull String getResultAsString(final @NotNull HttpsURLConnection conn, boolean error) throws IOException {
+        try (InputStream stream = error ? conn.getErrorStream() : conn.getInputStream();
+             InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+             BufferedReader in = new BufferedReader(reader)) {
+
+            return in.lines().collect(Collectors.joining());
+        } // other exit is via exception
+    }
+
+    /**
+     * @return null if successful, PasteResultError if the server answered with one of those, throws an IOException otherwise
+     */
+    public static @Nullable ErrorReply deletePaste(@NotNull String pasteId, @NotNull String deletionKey) throws IOException {
+        URL url = URI.create("https://api.paste.gg/v1/pastes/" + pasteId).toURL();
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+
         conn.setRequestMethod("DELETE");
-        String key = "Key "+deletionKey;
-        conn.setRequestProperty("Authorization",key);
+        String key = "Key " + deletionKey;
+
+        conn.setRequestProperty("Authorization", key);
         conn.connect();
 
         int responseCode = conn.getResponseCode();
-        return responseCode == 204;
+        return switch (responseCode) {
+            case HttpsURLConnection.HTTP_NO_CONTENT -> null;
+            case 400, 403, 404 -> GSON.fromJson(getResultAsString(conn, true), ErrorReply.class);
+            default -> throw new ConnectException("Unexpected response code: " + responseCode);
+        };
     }
 }

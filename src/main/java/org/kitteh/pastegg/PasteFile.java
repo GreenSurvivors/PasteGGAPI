@@ -23,33 +23,56 @@
  */
 package org.kitteh.pastegg;
 
+import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class PasteFile {
-    private final @Nullable String id;
-    private final @NotNull String name;
-    private final @NotNull PasteContent content;
+/**
+ * a paste contains at least one or more files
+ */
+public record PasteFile(
+        @Nullable String name,
+        @NotNull PasteContent content,
+        @SerializedName("highlight_language") @Nullable HighlightLanguage highlightLanguage) {
 
-    public PasteFile(@Nullable String id, @NotNull String name, @NotNull PasteContent content) {
-        this.id = id;
-        this.name = name;
-        this.content = content;
+    public PasteFile(@Nullable String name, @NotNull PasteContent content) {
+        this(name, content, null);
     }
 
-    public PasteFile(String name, PasteContent content) {
-        this(null, name, content);
+    /**
+     * The name can be null, if the file was created by the client, but the server will assign default names.
+     * However, you can delete the name again, and it will become null, the id can't be changed, after it was assigned.
+     */
+    @Override
+    public @Nullable String name() {
+        return name;
     }
 
-    public @NotNull PasteContent getContent() {
-        return this.content;
+    public @NotNull PasteContent content() {
+        return content;
     }
 
-    public @Nullable String getId() {
-        return this.id;
+    @Override
+    public @Nullable HighlightLanguage highlightLanguage() {
+        return highlightLanguage;
     }
 
-    public @NotNull String getName() {
-        return this.name;
+    @Override
+    public @NotNull String toString() {
+        StringBuilder builder = new StringBuilder("{");
+
+        if (name != null) {
+            builder.append("\"name\":\"").append(name).append("\", ");
+        }
+
+        if (highlightLanguage != null) {
+            builder.append("\"highlightLanguage\":\"").append(highlightLanguage).append("\", ");
+        }
+
+        builder.append("\"content\":{").append(content).append("}");
+
+        builder.append("}");
+
+        return builder.toString();
     }
 }

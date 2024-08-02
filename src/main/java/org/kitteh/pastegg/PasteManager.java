@@ -23,30 +23,36 @@
  */
 package org.kitteh.pastegg;
 
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.kitteh.pastegg.reply.ErrorReply;
+import org.kitteh.pastegg.reply.content.PasteResult;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by Narimm  on 4/03/2020.
- */
 public class PasteManager {
-    private static final Map<String, Paste> sessionPastes = new HashMap<>();
-    private static String apiKey;
+    private static final @NotNull Map<@NotNull String /* id*/, PasteResult> sessionPastes = new HashMap<>();
+    private static @Nullable String apiKey;
 
     /**
      * Return the API key.
+     *
      * @return the key
      */
-    public static String getApiKey() {
+    @Contract(pure = true)
+    public static @Nullable String getApiKey() {
         return apiKey;
     }
 
     /**
      * Set the managers API key.
+     *
      * @param key api Key
      */
-    public static void setApiKey(String key) {
+    public static void setApiKey(@Nullable String key) {
         apiKey = key;
     }
 
@@ -59,53 +65,61 @@ public class PasteManager {
 
     /**
      * Add a paste.
-     * @param paste the paste to add
-     * @return always null - Paste if the paste ID was already taken (should never happen.)
+     *
+     * @param result the result to add
      */
-    static Paste addPaste(Paste paste) {
-        return sessionPastes.put(paste.getId(), paste);
+    protected static void trackPaste(@NotNull PasteResult result) {
+        sessionPastes.put(result.id(), result);
     }
 
     /**
-     * This method will search for a paste id made this session and remove it - either using a stored
-     * deletion key OR the api key if provided - if neither are present it will return false.
+     * Attempt to delete a paste, posted in this session
+     * using a stored deletion key OR
+     * the api key if provided - if neither are present it will return false
      *
      * @param id the paste ID
-     * @return boolean
+     * @return true if the paste with the id was successfully deleted,
+     * false if paste.gg reported anything else than a success,
+     * throws an exception if anything on the way goes wrong.
+     * @throws InvalidPasteException if the id was not created in this session, or has no deletion key nor is an api ke known
+     * @see #deletePaste(String, String)
      */
-    public static boolean deletePaste(String id) {
-        Paste paste = sessionPastes.get(id);
-        if (paste == null) {
+    public static boolean deletePaste(@NotNull String id) throws InvalidPasteException, IOException {
+        PasteResult result = sessionPastes.get(id);
+        if (result == null) {
             return false;
-        }
-        String pasteKey;
-        if (paste.getDeletionKey().isPresent()) {
-            pasteKey = paste.getDeletionKey().get();
         } else {
-            if (apiKey != null) {
-                pasteKey = apiKey;
+            String pasteKey;
+            if (result.deletionKey() != null) {
+                pasteKey = result.deletionKey();
             } else {
-                return false;
+                if (apiKey == null) {
+                    return false;
+                }
+
+                pasteKey = apiKey;
             }
+
+            return deletePaste(result.id(), pasteKey) == null;
         }
-        return deletePaste(paste.getId(),pasteKey);
     }
 
     /**
      * Attempt to delete a paste.
      *
-     * @param id String
-     * @param deletionKey String
-     * @return boolean
+     * @param deletionKey may be the key provided by the service when the paste was posted; OR the matching API-key
+     * @param id          the paste ID
+     * @return null if successful,
+     * PasteResultError if the server answered with one of those,
+     * throws an IOException otherwise
+     * @throws InvalidPasteException if something unexpected happens
+     * @see #deletePaste(String)
      */
-    public static boolean deletePaste(String id,String deletionKey) {
+    public static @Nullable ErrorReply deletePaste(@NotNull String id, @NotNull String deletionKey) throws IOException {
         try {
             return ConnectionProvider.deletePaste(id, deletionKey);
         } catch (IOException e) {
-            InvalidPasteException inv = new InvalidPasteException("Paste could not be deleted: "
-                  + ConnectionProvider.getLastResponseCode());
-            inv.addSuppressed(e);
-            throw inv;
+            throw new IOException("Paste could not be deleted. ID: " + id, e);
         }
     }
 }

@@ -21,22 +21,31 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.kitteh.pastegg;
+package org.kitteh.pastegg.reply.content;
 
 import com.google.gson.annotations.SerializedName;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.kitteh.pastegg.HighlightLanguage;
 
-public enum Visibility {
-    @SerializedName("private")
-    PRIVATE,
-    @SerializedName("public")
-    PUBLIC,
-    @SerializedName("unlisted")
-    UNLISTED;
+public record PasteFileReply(
+        @NotNull String id,
+        @NotNull String name,
+        @SerializedName("highlight_language") @Nullable HighlightLanguage highlightLanguage) {
 
-    @Contract(pure = true)
-    public static @NotNull Visibility getDefault() {
-        return UNLISTED;
+    @Override
+    public @NotNull String toString() {
+        StringBuilder builder = new StringBuilder("{");
+
+        builder.append("\"id\":\"").append(name).append("\", ");
+        builder.append("\"name\":\"").append(name).append("\", ");
+
+        if (highlightLanguage != null) {
+            builder.append("\"highlightLanguage\":\"").append(highlightLanguage).append("\"");
+        }
+
+        builder.append("}");
+
+        return builder.toString();
     }
 }

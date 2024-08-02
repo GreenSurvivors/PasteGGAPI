@@ -21,22 +21,11 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.kitteh.pastegg;
+package org.kitteh.pastegg.reply;
 
-import com.google.gson.annotations.SerializedName;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-public enum Visibility {
-    @SerializedName("private")
-    PRIVATE,
-    @SerializedName("public")
-    PUBLIC,
-    @SerializedName("unlisted")
-    UNLISTED;
-
-    @Contract(pure = true)
-    public static @NotNull Visibility getDefault() {
-        return UNLISTED;
-    }
+public interface IReply {
+    @NotNull
+    ReplyStatus status();
 }

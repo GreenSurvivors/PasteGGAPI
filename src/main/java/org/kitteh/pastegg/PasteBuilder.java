@@ -23,104 +23,84 @@
  */
 package org.kitteh.pastegg;
 
-import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+import org.kitteh.pastegg.client.Paste;
+import org.kitteh.pastegg.reply.IReply;
+import org.kitteh.pastegg.reply.SuccessReply;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
 
-@SuppressWarnings({"unused", "FieldCanBeLocal", "WeakerAccess"})
 public class PasteBuilder {
-    private static final @NotNull Gson GSON = new Gson();
-
-    @SuppressWarnings("unused")
-    public static class PasteResult {
-        private @NotNull String status;
-        private @Nullable Paste result;
-        private @Nullable String message;
-
-        public Optional<Paste> getPaste() {
-            return Optional.ofNullable(this.result);
-        }
-
-        public Optional<String> getMessage() {
-            return Optional.ofNullable(this.message);
-        }
-
-        public @NotNull String getStatus() {
-            return status;
-        }
-    }
-
-    private @NotNull Visibility visibility = Visibility.getDefault();
-    private String name;
+    private final Paste paste = new Paste();
+    private @Nullable String apiKey = null;
     private boolean debug = false;
-    private String apiKey;
-    @SuppressWarnings({"TypeMayBeWeakened", "MismatchedQueryAndUpdateOfCollection"})
-    private final @NotNull List<@NotNull PasteFile> files = new LinkedList<>();
-    private @Nullable String expires;
 
-    public PasteBuilder name(String name) {
-        this.name = name;
+    public @NotNull PasteBuilder name(@Nullable String name) {
+        this.paste.setName(name);
         return this;
     }
 
     // ZonedDateTime.now( ZoneOffset.UTC ).plusSeconds(10)
-    public PasteBuilder expires(@Nullable ZonedDateTime when) {
-        this.expires = when == null ? null : when.format(DateTimeFormatter.ISO_INSTANT);
+    public @NotNull PasteBuilder expires(@Nullable ZonedDateTime when) {
+        this.paste.setExpirationDate(when);
         return this;
     }
 
-    public @NotNull PasteBuilder setApiKey(String key) {
+    public @NotNull PasteBuilder setApiKey(@Nullable String key) {
         this.apiKey = key;
         return this;
     }
 
     public @NotNull PasteBuilder visibility(@NotNull Visibility visibility) {
-        this.visibility = visibility;
+        this.paste.setVisibility(visibility);
+        return this;
+    }
+
+    public @NotNull PasteBuilder description(@NotNull String description) {
+        this.paste.setDescription(description);
         return this;
     }
 
     /**
      * debug the connection.
-     * @param debug boolean
-     * @return PasteBuilder
      */
-    public @NotNull PasteBuilder debug(boolean debug) {
+    @VisibleForTesting
+    protected @NotNull PasteBuilder debug(boolean debug) {
         this.debug = debug;
         return this;
     }
 
-
     public @NotNull PasteBuilder addFile(@NotNull PasteFile file) {
-        files.add(file);
+        this.paste.addFile(file);
         return this;
     }
 
-    public @Nullable PasteResult build() throws InvalidPasteException {
-        if (visibility == Visibility.PRIVATE && apiKey == null) {
+    /**
+     * Please note: the result of this Build is NOT a {@link Paste},
+     * but the created paste will already be uploaded to paste.gg,
+     * and instead the answer of the server will get returned.
+     */
+    public @NotNull IReply build() throws InvalidPasteException, IOException {
+        if (paste.getVisibility() == Visibility.PRIVATE && apiKey == null) {
             throw new InvalidPasteException("No API Key Provided for Private Paste...");
         }
-        String toString = GSON.toJson(this);
-        try {
-            String result = ConnectionProvider.processPasteRequest(apiKey, toString,debug);
-            PasteResult pasteResult = GSON.fromJson(result, PasteResult.class);
-            if (pasteResult.getPaste().isPresent()) {
-                PasteManager.addPaste(pasteResult.getPaste().get());
-            }
-            return pasteResult;
-        } catch (IOException e) {
+        if (paste.getFiles().isEmpty()) {
+            throw new InvalidPasteException("At least one file has to be added to the paste!");
+        }
 
-            InvalidPasteException invalid =
-                  new InvalidPasteException("Paste could not be sent to past.gg: "
-                        + e.getMessage());
-            invalid.addSuppressed(e);
-            throw invalid;
+        try {
+            IReply result = ConnectionProvider.processPasteRequest(apiKey, paste, debug);
+
+            if (result instanceof SuccessReply successReplySingle) {
+                PasteManager.trackPaste(successReplySingle.result());
+            }
+
+            return result;
+        } catch (IOException e) {
+            throw new IOException("Paste could not be sent to past.gg", e);
         }
     }
 }

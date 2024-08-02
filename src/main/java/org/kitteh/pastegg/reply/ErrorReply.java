@@ -21,7 +21,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-/**
- * Past egg. It's what happens to present eggs after a while.
- */
-package org.kitteh.pastegg;
+package org.kitteh.pastegg.reply;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+public record ErrorReply(
+        @NotNull ReplyStatus status,
+        @NotNull String error,
+        @Nullable String message) implements IReply {
+}

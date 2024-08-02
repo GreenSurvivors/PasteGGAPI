@@ -24,19 +24,22 @@
 package org.kitteh.pastegg;
 
 import com.google.gson.annotations.SerializedName;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 
-public enum Visibility {
-    @SerializedName("private")
-    PRIVATE,
-    @SerializedName("public")
-    PUBLIC,
-    @SerializedName("unlisted")
-    UNLISTED;
-
-    @Contract(pure = true)
-    public static @NotNull Visibility getDefault() {
-        return UNLISTED;
-    }
+/**
+ * These are the only data formats paste.gg supports.
+ * I would love to provide a register for all kinds of different formats,
+ * but our paste bin doesn't allow it.
+ */
+public enum PasteContentFormat { // TODO support more like XZ archives
+    /**
+     * Just give me the text!
+     */
+    @SerializedName("text")
+    TEXT,
+    @SerializedName("gzip")
+    GZIP,
+    @SerializedName("base64")
+    BASE64,
+    @SerializedName("xz")
+    XZ;
 }

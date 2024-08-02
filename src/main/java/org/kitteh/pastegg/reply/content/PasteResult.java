@@ -21,22 +21,22 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.kitteh.pastegg;
+package org.kitteh.pastegg.reply.content;
 
 import com.google.gson.annotations.SerializedName;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.kitteh.pastegg.Visibility;
 
-public enum Visibility {
-    @SerializedName("private")
-    PRIVATE,
-    @SerializedName("public")
-    PUBLIC,
-    @SerializedName("unlisted")
-    UNLISTED;
+import java.util.Date;
 
-    @Contract(pure = true)
-    public static @NotNull Visibility getDefault() {
-        return UNLISTED;
-    }
+public record PasteResult(
+        @NotNull String id,
+        @Nullable String description,
+        @NotNull Visibility visibility,
+        @NotNull @SerializedName("created_at") Date createdAt,
+        @NotNull @SerializedName("updated_at") Date updatedAt,
+        @Nullable Date expires,
+        @NotNull PasteFileReply[] files,
+        @Nullable @SerializedName("deletion_key") String deletionKey) {
 }

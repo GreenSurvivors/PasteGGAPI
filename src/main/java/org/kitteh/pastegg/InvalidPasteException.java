@@ -23,19 +23,8 @@
  */
 package org.kitteh.pastegg;
 
-/**
- * Created by Narimm on 4/03/2020.
- */
 public class InvalidPasteException extends RuntimeException {
-    private final String message;
-
     public InvalidPasteException(String message) {
-        this.message = message;
+        super(message);
     }
-
-    @Override
-    public String getMessage() {
-        return message;
-    }
-
 }
